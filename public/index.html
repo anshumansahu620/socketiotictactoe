@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tic Tac Toe Multiplayer</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+    />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap");
+
+      body {
+        display: grid;
+        place-content: center;
+        text-align: center;
+        background-color: #fff;
+        color: #000;
+        font-family: "Kalam", cursive;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-decoration: underline;
+        margin-bottom: 0.5rem;
+      }
+
+      h3 {
+        font-weight: 400;
+        font-size: 1.3rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        height: 300px;
+        width: 300px;
+        margin-bottom: 2rem;
+        border-radius: 20px;
+        overflow: hidden;
+        border: 4px solid black;
+      }
+
+      .box {
+        height: 100px;
+        width: 100px;
+        border: 2px solid black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 30px;
+        color: #000;
+        background-color: #fff;
+        transition: background-color 0.2s ease;
+        cursor: pointer;
+      }
+
+      .box:hover {
+        background-color: #eee;
+      }
+
+      .one,
+      .four,
+      .seven {
+        border-left: none;
+      }
+
+      .three,
+      .six,
+      .nine {
+        border-right: none;
+      }
+
+      .seven,
+      .eight,
+      .nine {
+        border-bottom: none;
+      }
+
+      .one {
+        border-top-left-radius: 20px;
+      }
+
+      .three {
+        border-top-right-radius: 20px;
+      }
+
+      .seven {
+        border-bottom-left-radius: 20px;
+      }
+
+      .nine {
+        border-bottom-right-radius: 20px;
+      }
+
+      .winner {
+        background-color: gold !important;
+      }
+
+      h4 {
+        font-weight: 400;
+        font-size: 0.9rem;
+      }
+
+      h4 a {
+        color: black;
+        font-weight: bold;
+        text-decoration: underline;
+        transition: color 0.3s ease;
+      }
+
+      h4 a:hover {
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Tic Tac Toe</h2>
+    <h3>Waiting for opponent...</h3>
+
+    <div class="container">
+      <button class="box one" data-index="0"></button>
+      <button class="box two" data-index="1"></button>
+      <button class="box three" data-index="2"></button>
+      <button class="box four" data-index="3"></button>
+      <button class="box five" data-index="4"></button>
+      <button class="box six" data-index="5"></button>
+      <button class="box seven" data-index="6"></button>
+      <button class="box eight" data-index="7"></button>
+      <button class="box nine" data-index="8"></button>
+    </div>
+
+    <h4>
+      made by
+      <a href="https://github.com/anshumansahu620" target="_blank"
+        >anshumansahu620</a
+      >
+    </h4>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const boxes = document.querySelectorAll(".box");
+      const statusText = document.querySelector("h3");
+
+      let playerSymbol = null;
+      let myTurn = false;
+      let gameOver = false;
+      let turnCount = 0;
+
+      // Assign symbol
+      socket.on("assignSymbol", (symbol) => {
+        playerSymbol = symbol;
+        myTurn = symbol === "X";
+        statusText.innerText = myTurn ? "Your turn (X)" : "Opponent's turn (X)";
+      });
+
+      // Listen to moves
+      socket.on("events", ({ button, value }) => {
+        const box = document.querySelector(`[data-index="${button}"]`);
+        if (box && box.textContent === "") {
+          box.textContent = value;
+          box.style.backgroundColor = value === "X" ? "lightblue" : "#be8f8f";
+          turnCount++;
+          checkWin();
+          myTurn = true;
+          if (!gameOver) {
+            statusText.innerText = "Your turn";
+          }
+        }
+      });
+
+      boxes.forEach((box) => {
+        box.addEventListener("click", () => {
+          if (!myTurn || gameOver || box.textContent !== "") return;
+
+          const index = box.getAttribute("data-index");
+          box.textContent = playerSymbol;
+          box.style.backgroundColor =
+            playerSymbol === "X" ? "lightblue" : "#be8f8f";
+
+          socket.emit("events", {
+            button: index,
+            value: playerSymbol,
+          });
+
+          myTurn = false;
+          turnCount++;
+          checkWin();
+
+          if (!gameOver) {
+            statusText.innerText = "Opponent's turn";
+          }
+        });
+      });
+
+      function checkWin() {
+        const patterns = [
+          [0, 1, 2],
+          [3, 4, 5],
+          [6, 7, 8],
+          [0, 3, 6],
+          [1, 4, 7],
+          [2, 5, 8],
+          [0, 4, 8],
+          [2, 4, 6],
+        ];
+
+        for (let pattern of patterns) {
+          const [a, b, c] = pattern;
+          const va = boxes[a].textContent;
+          const vb = boxes[b].textContent;
+          const vc = boxes[c].textContent;
+
+          if (va && va === vb && vb === vc) {
+            statusText.innerText = `${va} wins!`;
+            boxes[a].classList.add("winner");
+            boxes[b].classList.add("winner");
+            boxes[c].classList.add("winner");
+            gameOver = true;
+
+            setTimeout(resetGame, 4000);
+            return;
+          }
+        }
+
+        if (turnCount === 9 && !gameOver) {
+          statusText.innerText = "Draw!";
+          gameOver = true;
+          setTimeout(resetGame, 4000);
+        }
+      }
+
+      function resetGame() {
+        boxes.forEach((box) => {
+          box.textContent = "";
+          box.classList.remove("winner");
+          box.style.backgroundColor = "";
+        });
+        gameOver = false;
+        turnCount = 0;
+        myTurn = playerSymbol === "X";
+        statusText.innerText = myTurn ? "Your turn" : "Opponent's turn";
+      }
+    </script>
+  </body>
+</html>
