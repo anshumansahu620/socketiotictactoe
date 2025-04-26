@@ -19,5 +19,5 @@ package-lock.json
 git clone https://github.com/anshumansahu620/socketiotictactoe.git
 cd socketiotictactoe
 npm install
-npm run dev
+nodemon index.js
 ```
